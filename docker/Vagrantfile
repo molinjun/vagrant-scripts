@@ -1,0 +1,58 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+HOST_NAME = "docker-server"
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "bento/ubuntu-22.04"
+  config.vm.hostname = $HOST_NAME
+  config.vm.define "#{HOST_NAME}" do |t|
+  end
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  config.vm.network "private_network", ip: "192.168.33.10"
+  config.vm.network "forwarded_port", guest: 2375, host: 12375 
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = $HOST_NAME 
+    vb.cpus = "2"
+    vb.memory = "4096"
+  end
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update -y
+    apt-get install -y git vim curl jq wget ca-certificates gnupg
+
+    if [ ! "$(command -v docker)" ]; then
+      # enable docker remote access outside the VM
+      mkdir -p /etc/systemd/system/docker.service.d
+      cat >/etc/systemd/system/docker.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375 --containerd=/run/containerd/containerd.sock
+EOF
+      # Refer: https://docs.docker.com/engine/install/ubuntu/
+      # Add Docker's official GPG key:
+      sudo apt-get install 
+      sudo install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+      # Add the repository to Apt sources:
+      echo \
+        "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+        "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      sudo apt-get update -y
+      sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      sudo usermod -aG docker vagrant
+      newgrp docker
+    fi
+    docker version
+  SHELL
+end
