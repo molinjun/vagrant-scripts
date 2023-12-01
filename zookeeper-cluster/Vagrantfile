@@ -1,0 +1,49 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+CLUSTER_NAME = "LOCAL-ZOOKEEPER"
+NODE_COUNT = 1
+
+VM_IP_PREFIX =  "10.3.0."
+VM_IP_START = 100 
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "bento/ubuntu-22.04"
+
+  (1..NODE_COUNT).each do |i|
+    config.vm.define "#{CLUSTER_NAME}-0#{i}" do |node|
+      node.vm.hostname = "#{CLUSTER_NAME}-0#{i}"
+      node.vm.network :private_network, ip: "#{VM_IP_PREFIX}#{i + VM_IP_START}"
+      config.vm.network "forwarded_port", guest: 2181, host: 2181 
+      config.vm.network "forwarded_port", guest: 9090, host: 9090 
+      node.vm.provider "virtualbox" do |vb|
+          vb.cpus = 1
+          vb.memory = 2048 
+          vb.name = "#{CLUSTER_NAME}-0#{i}"
+      end
+
+      node.vm.provision "setup_node", type: "shell", inline: <<-SHELL 
+        # Install openjdk 
+        sudo apt-get update -y
+        sudo apt install unzip maven openjdk-17-jdk -y
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
+        java -version
+
+        # Install zookeeper
+        mkdir -p /tmp/zk && cd /tmp/zk
+        wget https://dlcdn.apache.org/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
+        tar -zxvf apache-zookeeper-3.8.3-bin.tar.gz
+        cd apache-zookeeper-3.8.3-bin
+        # Start zookeeper server
+        cp conf/zoo_sample.cfg conf/zoo.cfg
+        bin/zkServer.sh start
+
+        wget https://github.com/DeemOpen/zkui/archive/refs/heads/master.zip
+        unzip master.zip
+        cd zkui-master/
+        nohup java -jar zkui-2.0-SNAPSHOT-jar-with-dependencies.jar &
+      SHELL
+    end
+  end
+end

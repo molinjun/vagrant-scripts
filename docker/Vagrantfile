@@ -26,7 +26,7 @@ Vagrant.configure("2") do |config|
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
     apt-get update -y
-    apt-get install -y git vim curl jq wget ca-certificates gnupg
+    apt-get install -y git vim curl jq wget ca-certificates gnupg build-essential
 
     if [ ! "$(command -v docker)" ]; then
       # enable docker remote access outside the VM
