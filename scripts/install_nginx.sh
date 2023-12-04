@@ -32,7 +32,9 @@ EOF
 
 # Start nginx 
 if [ $(docker ps |grep nginx|wc -l) -eq 0 ]; then
-    docker rm nginx
+    if [ $(docker ps -a|grep nginx|wc -l) -ne 0 ]; then
+        docker rm nginx
+    fi
 
     docker run -d \
     -p 80:80\
