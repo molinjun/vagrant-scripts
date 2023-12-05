@@ -36,11 +36,12 @@ EOF
 if [ $(docker ps |grep prometheus|wc -l) -eq 0 ]; then
     docker run -d \
     -p 9090:9090 \
+    --restart=always \
     --name prometheus \
-    --net=host \
     -v $PWD/lib/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
     prom/prometheus
 else
+    docker restart prometheus
     echo "prometheus is already started"
 fi
 
@@ -49,11 +50,13 @@ fi
 if [ $(docker ps |grep grafana|wc -l) -eq 0 ]; then
     mkdir -p $PWD/data
     docker run -d -p 3000:3000 --name=grafana \
+    --restart=always \
+    -e "GF_AUTH_ANONYMOUS_ENABLED=true" \
     --user "$(id -u)" \
     --volume "$PWD/data/grafana:/var/lib/grafana" \
-    -e "GF_SERVER_ROOT_URL=http://grafana.molinjun.com/" \
-    --net=host \
+    -e "GF_SERVER_DOMAIN=grafana.dennis.io" \
     grafana/grafana-enterprise
 else
+    docker restart grafana
     echo "grafana is already started"
 fi

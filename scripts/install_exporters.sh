@@ -8,7 +8,10 @@ fi
 
 echo "docker is ready. Start to pull images ..."
 
+CADVISOR_VERSION=v0.43.0 # use the latest release version from https://github.com/google/cadvisor/releases
 docker pull prom/node-exporter
+docker pull gcr.io/cadvisor/cadvisor:$CADVISOR_VERSION
+
 
 # Start Node-Exporter 
 if [ $(docker ps |grep node-exporter|wc -l) -eq 0 ]; then
@@ -18,7 +21,7 @@ if [ $(docker ps |grep node-exporter|wc -l) -eq 0 ]; then
     -v "/sys:/host/sys" \
     -v "/:/rootfs" \
     -v "/etc/localtime:/etc/localtime" \
-    --net=host \
+    --restart=always \
     prom/node-exporter \
     --path.procfs /host/proc \
     --path.sysfs /host/sys \
@@ -26,15 +29,12 @@ if [ $(docker ps |grep node-exporter|wc -l) -eq 0 ]; then
     --collector.systemd --collector.processes
 
 else
+    docker restart node-exporter
     echo "node-exporter is already started"
 fi
 
 # Start cAdvisor 
-if [ $(sudo docker ps |grep cadvisor|wc -l) -ne 0 ]; then
-    docker stop cadvisor
-    docker rm cadvisor
-fi
-    VERSION=v0.43.0 # use the latest release version from https://github.com/google/cadvisor/releases
+if [ $(sudo docker ps |grep cadvisor|wc -l) -eq 0 ]; then
     sudo docker run \
     --volume=/:/rootfs:ro \
     --volume=/var/run:/var/run:ro \
@@ -45,10 +45,11 @@ fi
     --publish=8080:8080 \
     --detach=true \
     --name=cadvisor \
-    --net=host \
+    --restart=always \
     --privileged \
     --device=/dev/kmsg \
-    gcr.io/cadvisor/cadvisor:$VERSION
-# else
-    # echo "cadvisor is already started"
-# fi
+    gcr.io/cadvisor/cadvisor:$CADVISOR_VERSION
+else
+    docker restart cadvisor
+    echo "cadvisor is already started"
+fi

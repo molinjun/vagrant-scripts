@@ -17,15 +17,36 @@ events {
     worker_connections 1024;
 }
 http {
-  server{
-	  listen	80;
-	  server_name	grafana.molinjun.com;
-	  index	index.html	index.htm;
+    # this is required to proxy Grafana Live WebSocket connections.
+    map \$http_upgrade \$connection_upgrade {
+        default upgrade;
+        '' close;
+    }
 
-	  location / {
-		  proxy_pass	http://127.0.0.1:3000;
-	  }
-  }
+    upstream grafana {
+        server 10.12.0.101:3000;
+    }
+
+    server {
+        listen 80;
+	    server_name	grafana.dennis.io
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+
+        location / {
+            proxy_set_header Host \$http_host;
+            proxy_pass http://grafana;
+        }
+
+        # Proxy Grafana Live WebSocket connections.
+        location /api/live/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection \$connection_upgrade;
+            proxy_set_header Host \$http_host;
+            proxy_pass http://grafana;
+        }
+    }
 }
 
 EOF
@@ -39,10 +60,11 @@ if [ $(docker ps |grep nginx|wc -l) -eq 0 ]; then
     docker run -d \
     -p 80:80\
     --name nginx \
-    --net=host \
+    --restart=always \
     -v $PWD/lib/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
     nginx
 else
+    docker restart nginx
     echo "nginx is already started"
 fi
 
