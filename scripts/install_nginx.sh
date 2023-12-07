@@ -29,7 +29,12 @@ http {
 
     server {
         listen 80;
-	    server_name	grafana.dennis.io
+        listen 443 default_server ssl;
+	    server_name	grafana.dennis.io;
+
+        ssl_certificate certs/dennisio.crt;
+        ssl_certificate_key certs/dennisio.key;
+
         root /usr/share/nginx/html;
         index index.html index.htm;
 
@@ -62,6 +67,8 @@ if [ $(docker ps |grep nginx|wc -l) -eq 0 ]; then
     --name nginx \
     --restart=always \
     -v $PWD/lib/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+    -v $PWD/lib/nginx/tls/dennisio.crt:/etc/nginx/certs/dennisio.crt:ro \
+    -v $PWD/lib/nginx/tls/dennisio.key:/etc/nginx/certs/dennisio.key:ro \
     nginx
 else
     docker restart nginx

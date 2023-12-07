@@ -29,21 +29,45 @@ global:
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: [ '10.12.0.101:9100', '10.12.0.102:9100', '10.12.0.103:9100', '10.12.0.101:8080', '10.12.0.102:8080', '10.12.0.103:8080']
+      - targets: [ 
+        '10.12.0.101:9090' 
+     ]
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: [ 
+        '10.12.0.101:9100', 
+        '10.12.0.102:9100', 
+        '10.12.0.103:9100' 
+     ]
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: [ 
+        '10.12.0.101:8080', 
+        '10.12.0.102:8080', 
+        '10.12.0.103:8080'
+     ]
+  - job_name: 'zookeeper'
+    static_configs:
+      - targets: [ 
+        '10.12.0.101:7000',
+        '10.12.0.102:7000',
+        '10.12.0.103:7000'
+     ]
 EOF
 
 # Start Prometheus 
-if [ $(docker ps |grep prometheus|wc -l) -eq 0 ]; then
-    docker run -d \
+if [ $(docker ps -a |grep prometheus|wc -l) -ne 0 ]; then
+    docker stop prometheus 
+    docker rm prometheus 
+fi
+
+docker run -d \
     -p 9090:9090 \
     --restart=always \
     --name prometheus \
     -v $PWD/lib/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
     prom/prometheus
-else
-    docker restart prometheus
-    echo "prometheus is already started"
-fi
+echo "prometheus is already started"
 
 
 # start grafana with your user id and using the data directory
