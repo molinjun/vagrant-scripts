@@ -2,27 +2,30 @@
 
 set -euo pipefail
 
-if [ ! "$(command -v docker)" ]; then
-    bash ./install_docker.sh
+if [ ! "$(command -v java)" ]; then
+    # Install openjdk 
+    sudo apt-get update -y
+    sudo apt install unzip maven openjdk-17-jdk -y
+    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
 fi
-
-echo "docker is ready. Start to pull images ..."
-
-ZK_STABLE_VERSION=3.8.3
-docker pull zookeeper:$ZK_STABLE_VERSION 
-
-echo "zookeeper image is ready. Start to run the containers.."
+java -version
 
 mkdir -p $PWD/data/zookeeper
-mkdir -p $PWD/lib/zookeeper
+mkdir -p $PWD/lib/zookeeper 
 
-echo $ZOO_MY_ID > $PWD/lib/zookeeper/myid
+DATA_DIR=$PWD/data/zookeeper
+echo $ZOO_MY_ID > $DATA_DIR/myid
 
-cat <<EOF > $PWD/lib/zookeeper/zoo.cfg
+cd $PWD/lib/zookeeper
+wget https://dlcdn.apache.org/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
+tar -zxvf apache-zookeeper-3.8.3-bin.tar.gz
+cd apache-zookeeper-3.8.3-bin
+
+cat <<EOF > conf/zoo.cfg
 tickTime=2000
 initLimit=10
 syncLimit=5
-dataDir=/tmp/zookeeper
+dataDir=$DATA_DIR
 clientPort=2181
 metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider
 metricsProvider.httpHost=0.0.0.0
@@ -35,21 +38,6 @@ server.3=10.12.0.103:2888:3888
 EOF
 
 
-# Start nginx 
-if [ $(docker ps -a |grep zookeeper|wc -l) -ne 0 ]; then
-    docker stop zookeeper
-    docker rm zookeeper 
-fi
-
-docker run -d \
-    -p 2181:2181\
-    -p 2888:2888\
-    -p 3888:3888\
-    -p 18080:8080\
-    -p 7000:7000\
-    --name zookeeper \
-    -v $(pwd)/lib/zookeeper/zoo.cfg:/conf/zoo.cfg \
-    -e "ZOO_MY_ID=$ZOO_MY_ID" \
-    --restart=always \
-   zookeeper:3.8.3 
+# Start zookeeper server
+bin/zkServer.sh start
 echo "zookeeper cluster is already started"
