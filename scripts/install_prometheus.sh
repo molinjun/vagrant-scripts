@@ -53,6 +53,13 @@ scrape_configs:
         '10.12.0.102:7000',
         '10.12.0.103:7000'
      ]
+  - job_name: 'etcd'
+    static_configs:
+      - targets: [ 
+        '10.12.0.101:2379',
+        '10.12.0.102:2379',
+        '10.12.0.103:2379'
+     ]
 EOF
 
 # Start Prometheus 

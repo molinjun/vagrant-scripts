@@ -43,6 +43,13 @@ Vagrant.configure("2") do |config|
       },
       type: "shell",  path: "../scripts/install_zookeeper.sh" 
 
+      node.vm.provision "install_etcd_cluster", 
+      env: {
+          "VM_IP" => "#{VM_IP_PREFIX}#{i + VM_IP_START}", 
+          "VM_NAME" => "etcd_#{i}"
+      },
+      type: "shell",  path: "../scripts/install_etcd_cluster.sh" 
+
       if i == 1
         node.vm.provision "install_prometheus", type: "shell",  path: "../scripts/install_prometheus.sh" 
         node.vm.provision "install_nginx", type: "shell",  path: "../scripts/install_nginx.sh" 
